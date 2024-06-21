@@ -1,5 +1,11 @@
 사용방법
 
+0 . application.yaml 파일에   datasource:
+url: ######수정 후 사용 #########
+username: #####수정 후 사용 #####
+password: #### 수정 후 사용 ####### 
+의 디비정보를 정확히 입력한다. 
+
 
 1. test .java .com.example.invitation.alzip  패키지의 Execute 클래스의 unzip 메소드의 directoryPath  변수 바꿔주고 테스트 실행 
 
