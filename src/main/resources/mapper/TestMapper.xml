@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.example.invitation.api.dao.TestDao">
+
+    <select id="selectESFRSLN" resultType="com.example.invitation.api.vo.ESFRSLN">
+        select * from WITHUS.ESFRSLN
+    </select>
+
+
+    <select id="getColumnNameDataType" resultType="com.example.invitation.api.vo.ColumnMetadata">
+        SELECT COLUMN_NAME, DATA_TYPE_NAME
+        FROM SYS.TABLE_COLUMNS
+        WHERE SCHEMA_NAME = #{schema} AND TABLE_NAME = #{tableName}
+        ORDER BY  "POSITION"  asc;
+    </select>
+
+
+
+</mapper>

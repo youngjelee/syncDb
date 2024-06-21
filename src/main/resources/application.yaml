@@ -1,0 +1,26 @@
+spring:
+  profiles:
+    active: local
+  #thymeleaf 설정
+  thymeleaf:
+    check-template-location: true
+    prefix: classpath:/templates/   # .html 파일을 불러오기 위한 경로 설정(src/main/resources/templates)
+    suffix: .html   # 파일 확장자
+    cache: false
+  mvc:
+    static-path-pattern: /static/** # spring mvc 정적경로 변경
+  datasource:
+    url: jdbc:sap://222.120.176.78:39015
+    username: #####수정 후 사용 #####
+    password: #### 수정 후 사용 #######
+    driver-class-name: com.sap.db.jdbc.Driver
+
+
+mybatis:
+  mapper-locations: classpath:mapper/*.xml
+
+
+server:
+  servlet:
+    context-path: /
+  port: 8081
