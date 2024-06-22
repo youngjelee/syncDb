@@ -27,11 +27,15 @@
         INSERT INTO WITHUS.AA_BATCH_LOG
         (table_name
         ,result_txt
-        ,fail_reason)
+        ,fail_reason
+        ,tbl_row_cnt
+        ,csv_row_cnt )
         VALUES
         ( #{table_name}
         , #{result_txt}
         , #{fail_reason}
+        , #{tbl_row_cnt}
+        , #{csv_row_cnt}
         )
     </insert>
 

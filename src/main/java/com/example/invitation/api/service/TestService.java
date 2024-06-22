@@ -75,6 +75,11 @@ public class TestService {
                     File[] files = subDir.listFiles();
                     if (files != null) {
 
+                        //data.info 에 있는 row_count 수
+                        final String dataInfoFileName  = "data.info";
+                        File data_info = Arrays.stream(files).filter( _file -> _file.getName().equalsIgnoreCase(dataInfoFileName)).findFirst().orElse(null);
+                        int dataInfoRecordCount = getRecordCounter(data_info) ;
+
                         try{
 
                             for (File file : files) {
@@ -93,21 +98,18 @@ public class TestService {
                                 }
                             }
                             // 완료시 상위 폴더 END (없을시 생성) 폴더안으로 이동
-                            this.moveToEndFolder(subDir , "END" , tableName , null );
+                            this.moveToEndFolder(subDir , "END" , tableName , null , dataInfoRecordCount );
 
                         }catch(UncategorizedSQLException usqe ) {
                             // 테이블 중복 에러
                             if( usqe.getSQLException().getErrorCode() == 288 ){
 
-                                final String dataInfoFileName  = "data.info";
-
 
                                 // insert 해야할 total Count 와 db 에 있는 row count 비교 후 다르면 삭제 후 재 insert
                                 int cnt = testDao.getRowCountBySchemaTblName(SCHEMA+"."+tableName);
-                                File data_info = Arrays.stream(files).filter( _file -> _file.getName().equalsIgnoreCase(dataInfoFileName)).findFirst().orElse(null);
 
                                 if (data_info != null) {
-                                    int dataInfoRecordCount = getRecordCounter(data_info) ;
+
 
                                     // 다를 시 테이블 초기화
                                     if(cnt != dataInfoRecordCount ) {
@@ -119,12 +121,12 @@ public class TestService {
                                         this.insertFromCsv( csvData.getPath()  , SCHEMA , tableName);
 
                                         // 완료시 상위 폴더 END (없을시 생성) 폴더안으로 이동
-                                        this.moveToEndFolder(subDir , "END" , tableName , null );
+                                        this.moveToEndFolder(subDir , "END" , tableName , null ,dataInfoRecordCount);
 
                                     }else {
                                         System.out.println("성공적으로 처리된 테이블입니다. ") ;
                                         // 완료시 상위 폴더 END (없을시 생성) 폴더안으로 이동
-                                        this.moveToEndFolder(subDir , "END" , tableName , null );
+                                        this.moveToEndFolder(subDir , "END" , tableName , null ,dataInfoRecordCount );
 
                                     }
                                 } else {
@@ -140,7 +142,7 @@ public class TestService {
                         }catch(Exception e ) {
                             e.printStackTrace();
                             // 에러발생시  상위 폴더 ERROR 로 옮긴다 .
-                            this.moveToEndFolder(subDir , "ERROR" ,tableName , e );
+                            this.moveToEndFolder(subDir , "ERROR" ,tableName , e ,dataInfoRecordCount);
                         }
 
 
@@ -160,6 +162,8 @@ public class TestService {
     }
 
     private int getRecordCounter(File file ) throws Exception {
+
+        if(file == null) return 0 ;
 
         final String recordCountKey  = "RECORD_COUNT";
 
@@ -189,7 +193,7 @@ public class TestService {
 
 
 
-    private void moveToEndFolder(File subDir , String folderName , String tblName , Exception exception ) {
+    private void moveToEndFolder(File subDir , String folderName , String tblName , Exception exception , int csvCnt) {
         // END 폴더의 경로 설정
         File endFolder = new File(  ((File)subDir.getParentFile()).getParent() , folderName);
 
@@ -216,11 +220,17 @@ public class TestService {
             System.err.println("폴더 이동 중 오류 발생: " + e.getMessage());
         }
 
+        // insert 해야할 total Count 와 db 에 있는 row count 비교 후 다르면 삭제 후 재 insert
+        int dbCnt = testDao.getRowCountBySchemaTblName(SCHEMA+"."+tblName);
+
+
 
         // 로그성 데이터
         BatchMetaData batchMetaData = new BatchMetaData();
         batchMetaData.setTable_name(tblName);
         batchMetaData.setResult_txt(folderName);
+        batchMetaData.setTbl_row_cnt( dbCnt );
+        batchMetaData.setCsv_row_cnt( csvCnt );
         if(exception != null )   batchMetaData.setFail_reason(exception.getMessage());
 
         testDao.insertBatchLog( batchMetaData );
@@ -370,43 +380,29 @@ public class TestService {
         File directory = new File(directoryPath);
 
         if (directory.exists() && directory.isDirectory()) {
-            // 디렉토리 내 파일 목록 가져오기
-            File[] subDirectories = directory.listFiles(File::isDirectory);
-            if (subDirectories != null) {
-                for (File subDir : subDirectories) {
-
-                    String tableName = subDir.getName() ;
-
-                    // 각 폴더 내 파일 목록 가져오기
-                    File[] files = subDir.listFiles();
-                    if (files != null) {
-                        final String dataInfoFileName  = "data.info";
 
 
-                        // insert 해야할 total Count 와 db 에 있는 row count 비교 후 다르면 삭제 후 재 insert
-                        int tblRowCnt = testDao.getRowCountBySchemaTblName(SCHEMA+"."+tableName);
+            File[] subDirectories = directory.listFiles();
 
-                        File data_info = Arrays.stream(files).filter( _file -> _file.getName().equalsIgnoreCase(dataInfoFileName)).findFirst().orElse(null);
+            final String dataInfoFileName  = "data.info";
 
+            File data_info = Arrays.stream(subDirectories).filter( _file -> _file.getName().equalsIgnoreCase(dataInfoFileName)).findFirst().orElse(null);
 
-                        BatchMetaData batchMetaData = new BatchMetaData();
-                        batchMetaData.setTable_name(tableName);
-                        batchMetaData.setTbl_row_cnt(tblRowCnt);
+            String tableName = directory.getName() ;
 
-                        if (data_info != null) {
-                            int dataInfoRecordCount = getRecordCounter(data_info) ;
-                            batchMetaData.setCsv_row_cnt(dataInfoRecordCount);
-                        }
+            // insert 해야할 total Count 와 db 에 있는 row count 비교 후 다르면 삭제 후 재 insert
+            int tblRowCnt = testDao.getRowCountBySchemaTblName(SCHEMA+"."+tableName);
 
-                        testDao.updateBatchLog(batchMetaData);
+            BatchMetaData batchMetaData = new BatchMetaData();
+            batchMetaData.setTable_name(tableName);
+            batchMetaData.setTbl_row_cnt(tblRowCnt);
 
-
-                    }
-
-
-
-                }
+            if (data_info != null) {
+                int dataInfoRecordCount = getRecordCounter(data_info) ;
+                batchMetaData.setCsv_row_cnt(dataInfoRecordCount);
             }
+
+            testDao.updateBatchLog(batchMetaData);
 
         }
 

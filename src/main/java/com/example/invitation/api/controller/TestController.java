@@ -32,7 +32,8 @@ public class TestController {
     public void queryAndInsert() throws Exception {
 
 //        String directoryPath = "C:\\Users\\wpdud\\OneDrive\\문서\\카카오톡 받은 파일\\db_sync\\index\\WITHUS";
-        String directoryPath = "C:\\Users\\wpdud\\OneDrive\\문서\\카카오톡 받은 파일\\db_sync2\\index\\WITHUS";
+//        String directoryPath = "C:\\Users\\wpdud\\OneDrive\\문서\\카카오톡 받은 파일\\db_sync2\\index\\WITHUS";
+        String directoryPath = "C:\\Users\\wpdud\\OneDrive\\문서\\카카오톡 받은 파일\\db_sync\\export\\WITHUS";
 
         // 해당 경로의 File 객체 생성
         File directory = new File(directoryPath);
@@ -60,12 +61,12 @@ public class TestController {
 //            testService.executeQueryAndInsert(directoryPath);
 
     }
-    @GetMapping("updateBatchLog/")
+    @GetMapping("/updateBatchLog")
     public void updateBatchLog() throws Exception {
 
 
 //        String directoryPath = "C:\\Users\\wpdud\\OneDrive\\문서\\카카오톡 받은 파일\\db_sync2\\index\\WITHUS\\END";
-        String directoryPath = "C:\\Users\\wpdud\\OneDrive\\문서\\카카오톡 받은 파일\\db_sync2\\index\\WITHUS\\END";
+        String directoryPath = "C:\\Users\\wpdud\\Downloads\\END";
 
         // 해당 경로의 File 객체 생성
         File directory = new File(directoryPath);
@@ -77,8 +78,7 @@ public class TestController {
             File[] subDirectories = directory.listFiles(File::isDirectory);
             if (subDirectories != null) {
                 for (File subDir : subDirectories) {
-
-
+                    testService.updateBatchLogExecute (subDir.getPath()) ;
                 }
             }
         } else {
