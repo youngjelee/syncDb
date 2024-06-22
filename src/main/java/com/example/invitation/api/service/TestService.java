@@ -74,8 +74,6 @@ public class TestService {
                     // 각 폴더 내 파일 목록 가져오기
                     File[] files = subDir.listFiles();
                     if (files != null) {
-                        boolean foundCreateSQL = false;
-                        boolean foundDataCSV = false;
 
                         try{
 
@@ -363,11 +361,58 @@ public class TestService {
             throw e;
         }
 
+    }
+    //테이블에 넣어야하는 row  insert 된 row update
+    public void updateBatchLogExecute(String directoryPath ) throws Exception {
 
+
+        // 해당 경로의 File 객체 생성
+        File directory = new File(directoryPath);
+
+        if (directory.exists() && directory.isDirectory()) {
+            // 디렉토리 내 파일 목록 가져오기
+            File[] subDirectories = directory.listFiles(File::isDirectory);
+            if (subDirectories != null) {
+                for (File subDir : subDirectories) {
+
+                    String tableName = subDir.getName() ;
+
+                    // 각 폴더 내 파일 목록 가져오기
+                    File[] files = subDir.listFiles();
+                    if (files != null) {
+                        final String dataInfoFileName  = "data.info";
+
+
+                        // insert 해야할 total Count 와 db 에 있는 row count 비교 후 다르면 삭제 후 재 insert
+                        int tblRowCnt = testDao.getRowCountBySchemaTblName(SCHEMA+"."+tableName);
+
+                        File data_info = Arrays.stream(files).filter( _file -> _file.getName().equalsIgnoreCase(dataInfoFileName)).findFirst().orElse(null);
+
+
+                        BatchMetaData batchMetaData = new BatchMetaData();
+                        batchMetaData.setTable_name(tableName);
+                        batchMetaData.setTbl_row_cnt(tblRowCnt);
+
+                        if (data_info != null) {
+                            int dataInfoRecordCount = getRecordCounter(data_info) ;
+                            batchMetaData.setCsv_row_cnt(dataInfoRecordCount);
+                        }
+
+                        testDao.updateBatchLog(batchMetaData);
+
+
+                    }
+
+
+
+                }
+            }
+
+        }
 
     }
 
-    private String generateInsertStatement(String tableName, int numberOfColumns) {
+        private String generateInsertStatement(String tableName, int numberOfColumns) {
         StringBuilder sqlBuilder = new StringBuilder("INSERT INTO ");
         sqlBuilder.append(tableName).append(" VALUES (");
         for (int i = 0; i < numberOfColumns; i++) {

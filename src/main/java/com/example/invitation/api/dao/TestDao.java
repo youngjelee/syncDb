@@ -22,4 +22,6 @@ public interface TestDao {
 
     void insertBatchLog(BatchMetaData batchMetaData);
 
+    void updateBatchLog (BatchMetaData batchMetaData) ;
+
 }

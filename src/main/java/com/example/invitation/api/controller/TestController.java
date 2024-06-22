@@ -49,8 +49,6 @@ public class TestController {
                     System.out.println("폴더 = 테이블 명 : " + subDir.getName());
 
                     testService.executeQueryAndInsert(subDir.getPath());
-
-
                 }
 
             }
@@ -62,7 +60,32 @@ public class TestController {
 //            testService.executeQueryAndInsert(directoryPath);
 
     }
+    @GetMapping("updateBatchLog/")
+    public void updateBatchLog() throws Exception {
 
+
+//        String directoryPath = "C:\\Users\\wpdud\\OneDrive\\문서\\카카오톡 받은 파일\\db_sync2\\index\\WITHUS\\END";
+        String directoryPath = "C:\\Users\\wpdud\\OneDrive\\문서\\카카오톡 받은 파일\\db_sync2\\index\\WITHUS\\END";
+
+        // 해당 경로의 File 객체 생성
+        File directory = new File(directoryPath);
+
+        // 디렉토리가 존재하는지 확인
+        if (directory.exists() && directory.isDirectory()) {
+
+            // 디렉토리 내 파일 목록 가져오기
+            File[] subDirectories = directory.listFiles(File::isDirectory);
+            if (subDirectories != null) {
+                for (File subDir : subDirectories) {
+
+
+                }
+            }
+        } else {
+            System.out.println("해당 경로가 존재하지 않거나 디렉토리가 아닙니다.");
+        }
+
+    }
 
 
 

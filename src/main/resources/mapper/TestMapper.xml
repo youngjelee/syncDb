@@ -35,4 +35,18 @@
         )
     </insert>
 
+
+    <update id="updateBatchLog" parameterType="com.example.invitation.api.vo.BatchMetaData">
+        update WITHUS.AA_BATCH_LOG
+
+        set
+
+        tbl_row_cnt = #{tbl_row_cnt}
+        , csv_row_cnt = #{csv_row_cnt}
+
+        where
+
+        table_name = #{table_name}
+    </update>
+
 </mapper>
