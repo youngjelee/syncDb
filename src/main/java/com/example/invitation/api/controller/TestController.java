@@ -8,6 +8,7 @@ import com.example.invitation.api.dao.TestDao;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.io.File;
 import java.util.List;
 
 @RestController
@@ -28,10 +29,37 @@ public class TestController {
 
 
     @GetMapping("/mappingFile")
-    public void queryAndInsert () {
+    public void queryAndInsert() throws Exception {
 
-        String directoryPath = "C:\\Users\\wpdud\\OneDrive\\문서\\카카오톡 받은 파일\\새 폴더\\index\\WITHUS\\ES";
-        testService.executeQueryAndInsert(directoryPath);
+//        String directoryPath = "C:\\Users\\wpdud\\OneDrive\\문서\\카카오톡 받은 파일\\db_sync\\index\\WITHUS";
+        String directoryPath = "C:\\Users\\wpdud\\OneDrive\\문서\\카카오톡 받은 파일\\db_sync2\\index\\WITHUS";
+
+        // 해당 경로의 File 객체 생성
+        File directory = new File(directoryPath);
+
+            // 디렉토리가 존재하는지 확인
+        if (directory.exists() && directory.isDirectory()) {
+
+            // 디렉토리 내 파일 목록 가져오기
+            File[] subDirectories = directory.listFiles(File::isDirectory);
+            if (subDirectories != null) {
+                for (File subDir : subDirectories) {
+
+                    if( subDir.getName() .equals("END") ||  subDir.getName() .equals("ERROR")   ) continue;
+                    System.out.println("폴더 = 테이블 명 : " + subDir.getName());
+
+                    testService.executeQueryAndInsert(subDir.getPath());
+
+
+                }
+
+            }
+
+        } else {
+            System.out.println("해당 경로가 존재하지 않거나 디렉토리가 아닙니다.");
+        }
+
+//            testService.executeQueryAndInsert(directoryPath);
 
     }
 

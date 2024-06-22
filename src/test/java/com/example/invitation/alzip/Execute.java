@@ -21,7 +21,8 @@ public class Execute {
 
 
         // 특정 디렉토리 경로
-        String directoryPath = "C:\\Users\\wpdud\\OneDrive\\문서\\카카오톡 받은 파일\\새 폴더";
+//        String directoryPath = "C:\\Users\\wpdud\\OneDrive\\문서\\카카오톡 받은 파일\\db_sync";
+        String directoryPath = "C:\\Users\\wpdud\\OneDrive\\문서\\카카오톡 받은 파일\\db_sync2";
 
         try {
             // 디렉토리 아래의 모든 .tar.gz 파일을 찾기

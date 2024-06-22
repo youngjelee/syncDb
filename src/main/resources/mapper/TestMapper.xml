@@ -15,6 +15,24 @@
         ORDER BY  "POSITION"  asc;
     </select>
 
+    <select id="getRowCountBySchemaTblName" resultType="int">
+        select count(1) from ${schema_tableName}
+    </select>
 
+    <update id="truncateTableBySchemaTblName" >
+        TRUNCATE TABLE ${schema_tableName}
+    </update>
+
+    <insert id="insertBatchLog" parameterType="com.example.invitation.api.vo.BatchMetaData" >
+        INSERT INTO WITHUS.AA_BATCH_LOG
+        (table_name
+        ,result_txt
+        ,fail_reason)
+        VALUES
+        ( #{table_name}
+        , #{result_txt}
+        , #{fail_reason}
+        )
+    </insert>
 
 </mapper>

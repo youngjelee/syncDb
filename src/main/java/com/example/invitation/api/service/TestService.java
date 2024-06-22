@@ -1,10 +1,14 @@
 package com.example.invitation.api.service;
 
 import com.example.invitation.api.dao.TestDao;
+import com.example.invitation.api.vo.BatchMetaData;
 import com.example.invitation.api.vo.ColumnMetadata;
 import com.opencsv.CSVReader;
 import com.opencsv.exceptions.CsvException;
+import com.sap.db.jdbc.exceptions.JDBCDriverException;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.dao.DataAccessException;
+import org.springframework.jdbc.UncategorizedSQLException;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 
@@ -16,6 +20,8 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.sql.SQLDataException;
+import java.sql.SQLException;
 import java.sql.SQLIntegrityConstraintViolationException;
 import java.text.SimpleDateFormat;
 import java.io.BufferedReader;
@@ -25,6 +31,7 @@ import java.sql.Timestamp;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Date;
 import java.util.List;
 
@@ -44,7 +51,7 @@ public class TestService {
 
     final String  SCHEMA = "WITHUS";
     //    public void test
-    public void executeQueryAndInsert(String directoryPath ) {
+    public void executeQueryAndInsert(String directoryPath ) throws Exception {
 
 
         // 해당 경로의 File 객체 생성
@@ -76,26 +83,69 @@ public class TestService {
                                 if (file.getName().equalsIgnoreCase("create.sql")) {
                                     // ddl 실행
                                     String ddlSql = this.readFileToString( file );
-                                    try{
-                                        this.executeDDL(ddlSql);
-                                    } catch(Exception e ) {
-                                        throw e ;
-                                    }
+
+
+                                    this.executeDDL(ddlSql); // 오류시 보통 테이블 중복에러  UncategorizedSQLException
+
 
                                 } else if (file.getName().equalsIgnoreCase("data.csv")) {
                                     // insert 실행
-                                    this.insertFromCsv( file.getPath()  , SCHEMA , tableName);
+                                    this.insertFromCsv( file.getPath()  , SCHEMA , tableName   );
 
                                 }
                             }
                             // 완료시 상위 폴더 END (없을시 생성) 폴더안으로 이동
-                            this.moveToEndFolder(subDir , "END");
+                            this.moveToEndFolder(subDir , "END" , tableName , null );
+
+                        }catch(UncategorizedSQLException usqe ) {
+                            // 테이블 중복 에러
+                            if( usqe.getSQLException().getErrorCode() == 288 ){
+
+                                final String dataInfoFileName  = "data.info";
+
+
+                                // insert 해야할 total Count 와 db 에 있는 row count 비교 후 다르면 삭제 후 재 insert
+                                int cnt = testDao.getRowCountBySchemaTblName(SCHEMA+"."+tableName);
+                                File data_info = Arrays.stream(files).filter( _file -> _file.getName().equalsIgnoreCase(dataInfoFileName)).findFirst().orElse(null);
+
+                                if (data_info != null) {
+                                    int dataInfoRecordCount = getRecordCounter(data_info) ;
+
+                                    // 다를 시 테이블 초기화
+                                    if(cnt != dataInfoRecordCount ) {
+                                        testDao.truncateTableBySchemaTblName( SCHEMA+"."+tableName  );
+
+                                        // insert 실행
+                                        final String csvInfo = "data.csv";
+                                        File csvData = Arrays.stream(files).filter( _file -> _file.getName().equalsIgnoreCase(csvInfo)).findFirst().orElse(null);
+                                        this.insertFromCsv( csvData.getPath()  , SCHEMA , tableName);
+
+                                        // 완료시 상위 폴더 END (없을시 생성) 폴더안으로 이동
+                                        this.moveToEndFolder(subDir , "END" , tableName , null );
+
+                                    }else {
+                                        System.out.println("성공적으로 처리된 테이블입니다. ") ;
+                                        // 완료시 상위 폴더 END (없을시 생성) 폴더안으로 이동
+                                        this.moveToEndFolder(subDir , "END" , tableName , null );
+
+                                    }
+                                } else {
+                                    System.err.println("data.info 파일을 찾을 수 없습니다.");
+                                    throw usqe;
+                                }
+                            }else {
+                                throw usqe;
+                            }
+
+
 
                         }catch(Exception e ) {
                             e.printStackTrace();
                             // 에러발생시  상위 폴더 ERROR 로 옮긴다 .
-                            this.moveToEndFolder(subDir , "ERROR");
+                            this.moveToEndFolder(subDir , "ERROR" ,tableName , e );
                         }
+
+
 
                     } else {
                         System.out.println("\t해당 폴더가 비어 있습니다.");
@@ -111,10 +161,39 @@ public class TestService {
 
     }
 
+    private int getRecordCounter(File file ) throws Exception {
 
-    private void moveToEndFolder(File subDir , String folderName) {
+        final String recordCountKey  = "RECORD_COUNT";
+
+        try (BufferedReader br = new BufferedReader(new FileReader(file))) {
+            String line;
+            while ((line = br.readLine()) != null) {
+                // 파일에서 읽은 각 줄을 분석
+                if (line.startsWith(recordCountKey)) {
+                    // RECORD_COUNT=3358에서 '=' 기준으로 자른 후 값만 추출
+                    String[] parts = line.split("=");
+                    if (parts.length == 2) {
+                        String recordCountValue = parts[1].trim();
+                        // recordCountValue에 원하는 RECORD_COUNT 값이 저장됩니다.
+                        int recordCount = Integer.parseInt(recordCountValue);
+                        System.out.println("RECORD_COUNT: " + recordCount);
+                        return recordCount;
+//                        break; // 원하는 값이 발견되면 종료
+                    }
+                }
+            }
+        } catch (IOException | NumberFormatException e) {
+            e.printStackTrace();
+        }
+        throw new Exception(file.getPath() +"data.info 파일 에 RECORD_COUNT 가 없음 " )  ;
+    }
+
+
+
+
+    private void moveToEndFolder(File subDir , String folderName , String tblName , Exception exception ) {
         // END 폴더의 경로 설정
-        File endFolder = new File(subDir.getParent(), folderName);
+        File endFolder = new File(  ((File)subDir.getParentFile()).getParent() , folderName);
 
         // END 폴더가 존재하지 않으면 생성
         if (!endFolder.exists()) {
@@ -138,6 +217,15 @@ public class TestService {
         } catch (IOException e) {
             System.err.println("폴더 이동 중 오류 발생: " + e.getMessage());
         }
+
+
+        // 로그성 데이터
+        BatchMetaData batchMetaData = new BatchMetaData();
+        batchMetaData.setTable_name(tblName);
+        batchMetaData.setResult_txt(folderName);
+        if(exception != null )   batchMetaData.setFail_reason(exception.getMessage());
+
+        testDao.insertBatchLog( batchMetaData );
     }
 
 
@@ -164,10 +252,8 @@ public class TestService {
     }
 
 
-    private void executeDDL(String ddlStatment) {
+    private void executeDDL(String ddlStatment) throws UncategorizedSQLException , Exception  {
         // 예시: CREATE TABLE 구문을 실행하는 DDL
-
-
         try {
             String [] ddlStatments = ddlStatment.split(";");
 
@@ -176,7 +262,16 @@ public class TestService {
                 System.out.println("DDL executed successfully.");
             }
 
-        } catch (Exception e) {
+        }
+        // SAP DB EXCEPTION CODE
+        // https://help.sap.com/docs/HANA_SERVICE_CF/7c78579ce9b14a669c1f3295b0d8ca16/20a78d3275191014b41bae7c4a46d835.html
+
+        catch(UncategorizedSQLException usqe ) {
+            usqe.printStackTrace();
+            throw usqe;
+//            usqe.getSQLException().getMessage();
+//            usqe.getSQLException().getErrorCode(); // 288 이면 테이블 중복 에러
+        }catch (Exception e) {
             System.err.println("Error executing DDL: " + e.getMessage());
             throw e;
         }
@@ -201,8 +296,11 @@ public class TestService {
 //        }
 //    }
 
-    public void insertFromCsv(String csvFilePath, final String SCHEMA , final String TABLE) throws Exception {
+    public void insertFromCsv(String csvFilePath, final String SCHEMA , final String TABLE  ) throws Exception {
+
+
         try (CSVReader reader = new CSVReader(new FileReader(csvFilePath))) {
+
             List<String[]> lines = reader.readAll();
 
             if (lines.isEmpty()) {
@@ -259,13 +357,14 @@ public class TestService {
             System.out.println("Data inserted successfully from CSV to table: " + TABLE );
 
 
-        } catch (IOException e) {
-            System.err.println("Error reading CSV file: " + e.getMessage());
-        } catch (CsvException e) {
-            throw new RuntimeException(e);
+
+
         } catch(Exception e  ) {
             throw e;
         }
+
+
+
     }
 
     private String generateInsertStatement(String tableName, int numberOfColumns) {
