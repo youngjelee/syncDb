@@ -86,15 +86,10 @@ public class TestService {
                                 if (file.getName().equalsIgnoreCase("create.sql")) {
                                     // ddl 실행
                                     String ddlSql = this.readFileToString( file );
-
-
                                     this.executeDDL(ddlSql); // 오류시 보통 테이블 중복에러  UncategorizedSQLException
-
-
                                 } else if (file.getName().equalsIgnoreCase("data.csv")) {
                                     // insert 실행
                                     this.insertFromCsv( file.getPath()  , SCHEMA , tableName   );
-
                                 }
                             }
                             // 완료시 상위 폴더 END (없을시 생성) 폴더안으로 이동
@@ -104,35 +99,52 @@ public class TestService {
                             // 테이블 중복 에러
                             if( usqe.getSQLException().getErrorCode() == 288 ){
 
+                                // 2024-06-24 테이블 중복 에러시 DROP TABLE 시 재시도 하는 로직으로 변경
+                                String dropDDL = "DROP TABLE WITHUS."+tableName;
+                                //테이블 드랍
+                                jdbcTemplate.execute(dropDDL);
+
+                                for (File file : files) {
+                                    if (file.getName().equalsIgnoreCase("create.sql")) {
+                                        // ddl 실행
+                                        String ddlSql = this.readFileToString( file );
+                                        this.executeDDL(ddlSql); // 오류시 보통 테이블 중복에러  UncategorizedSQLException
+                                    } else if (file.getName().equalsIgnoreCase("data.csv")) {
+                                        // insert 실행
+                                        this.insertFromCsv( file.getPath()  , SCHEMA , tableName   );
+                                    }
+                                }
+                                // 완료시 상위 폴더 END (없을시 생성) 폴더안으로 이동
+                                this.moveToEndFolder(subDir , "END" , tableName , null , dataInfoRecordCount );
 
                                 // insert 해야할 total Count 와 db 에 있는 row count 비교 후 다르면 삭제 후 재 insert
-                                int cnt = testDao.getRowCountBySchemaTblName(SCHEMA+"."+tableName);
-
-                                if (data_info != null) {
-
-
-                                    // 다를 시 테이블 초기화
-                                    if(cnt != dataInfoRecordCount ) {
-                                        testDao.truncateTableBySchemaTblName( SCHEMA+"."+tableName  );
-
-                                        // insert 실행
-                                        final String csvInfo = "data.csv";
-                                        File csvData = Arrays.stream(files).filter( _file -> _file.getName().equalsIgnoreCase(csvInfo)).findFirst().orElse(null);
-                                        this.insertFromCsv( csvData.getPath()  , SCHEMA , tableName);
-
-                                        // 완료시 상위 폴더 END (없을시 생성) 폴더안으로 이동
-                                        this.moveToEndFolder(subDir , "END" , tableName , null ,dataInfoRecordCount);
-
-                                    }else {
-                                        System.out.println("성공적으로 처리된 테이블입니다. ") ;
-                                        // 완료시 상위 폴더 END (없을시 생성) 폴더안으로 이동
-                                        this.moveToEndFolder(subDir , "END" , tableName , null ,dataInfoRecordCount );
-
-                                    }
-                                } else {
-                                    System.err.println("data.info 파일을 찾을 수 없습니다.");
-                                    throw usqe;
-                                }
+//                                int cnt = testDao.getRowCountBySchemaTblName(SCHEMA+"."+tableName);
+//
+//                                if (data_info != null) {
+//
+//
+//                                    // 다를 시 테이블 초기화
+//                                    if(cnt != dataInfoRecordCount ) {
+//                                        testDao.truncateTableBySchemaTblName( SCHEMA+"."+tableName  );
+//
+//                                        // insert 실행
+//                                        final String csvInfo = "data.csv";
+//                                        File csvData = Arrays.stream(files).filter( _file -> _file.getName().equalsIgnoreCase(csvInfo)).findFirst().orElse(null);
+//                                        this.insertFromCsv( csvData.getPath()  , SCHEMA , tableName);
+//
+//                                        // 완료시 상위 폴더 END (없을시 생성) 폴더안으로 이동
+//                                        this.moveToEndFolder(subDir , "END" , tableName , null ,dataInfoRecordCount);
+//
+//                                    }else {
+//                                        System.out.println("성공적으로 처리된 테이블입니다. ") ;
+//                                        // 완료시 상위 폴더 END (없을시 생성) 폴더안으로 이동
+//                                        this.moveToEndFolder(subDir , "END" , tableName , null ,dataInfoRecordCount );
+//
+//                                    }
+//                                } else {
+//                                    System.err.println("data.info 파일을 찾을 수 없습니다.");
+//                                    throw usqe;
+//                                }
                             }else {
                                 throw usqe;
                             }
@@ -332,7 +344,7 @@ public class TestService {
 
             // Process each data line (skip the header line)
 //            int batchSize = 1000; // Adjust batch size as needed
-            int batchSize = 1000; // Adjust batch size as needed
+            int batchSize = 10000; // Adjust batch size as needed
             List<Object[]> batchArgs = new ArrayList<>();
 
             for (int i = 0; i < lines.size(); i++) { // Start from index 0 to skip header line

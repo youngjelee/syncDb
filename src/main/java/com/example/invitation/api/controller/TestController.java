@@ -33,7 +33,7 @@ public class TestController {
 
 //        String directoryPath = "C:\\Users\\wpdud\\OneDrive\\문서\\카카오톡 받은 파일\\db_sync\\index\\WITHUS";
 //        String directoryPath = "C:\\Users\\wpdud\\OneDrive\\문서\\카카오톡 받은 파일\\db_sync2\\index\\WITHUS";
-        String directoryPath = "C:\\Users\\wpdud\\OneDrive\\문서\\카카오톡 받은 파일\\db_sync\\export\\WITHUS";
+        String directoryPath = "C:\\Users\\devba\\Documents\\카카오톡 받은 파일\\sk\\index\\WITHUS";
 
         // 해당 경로의 File 객체 생성
         File directory = new File(directoryPath);
