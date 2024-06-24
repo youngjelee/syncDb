@@ -11,8 +11,8 @@ spring:
     static-path-pattern: /static/** # spring mvc 정적경로 변경
   datasource:
     url: jdbc:sap://222.120.176.78:39015
-    username: SYSTEM
-    password: Emro0314!
+    username: ZZZZZZ
+    password: ZZZZZZZZ
     driver-class-name: com.sap.db.jdbc.Driver
 
 
